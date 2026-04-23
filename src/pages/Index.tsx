@@ -66,7 +66,13 @@ const Index = () => {
     };
     loadSheet();
     loadEntries();
-    const interval = setInterval(() => { loadSheet(); loadEntries(); }, 5 * 60 * 1000);
+    // Polling cepat: spreadsheet sumber dicek setiap 30 detik agar perubahan
+    // (delete/edit) yang dilakukan langsung di Google Sheet langsung terlihat di app.
+    const interval = setInterval(() => { loadSheet(); loadEntries(); }, 30 * 1000);
+    // Refresh otomatis ketika tab dibuka kembali
+    const onFocus = () => { loadSheet(); loadEntries(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
 
     // Realtime: dengarkan entry baru -> langsung refresh dashboard
     const channel = supabase
@@ -74,7 +80,12 @@ const Index = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'realisasi_entries' }, () => loadEntries())
       .subscribe();
 
-    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
   }, [loadEntries]);
 
   const data = useMemo(() => mergeEntries(sheetData, entries), [sheetData, entries]);
