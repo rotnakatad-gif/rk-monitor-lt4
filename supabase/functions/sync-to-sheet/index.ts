@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SPREADSHEET_ID = '1B2UPHU3uRAa6ixwEjYxNbCiUkBIg_31Dkh6W3g9_Nvc';
+const SPREADSHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
 const SHEET_TAB = 'Realisasi_Entries';
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 
