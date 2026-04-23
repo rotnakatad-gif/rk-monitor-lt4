@@ -14,7 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      realisasi_entries: {
+        Row: {
+          belanja: string
+          bukti_filename: string | null
+          bukti_mimetype: string | null
+          bukti_path: string | null
+          bulan: number
+          created_at: string
+          id: string
+          kegiatan: string
+          keterangan: string | null
+          kode_rup: string | null
+          nilai_realisasi: number
+          no_kode_paket: string | null
+          no_surat_pesanan: string | null
+          program: string
+          sub_kegiatan: string
+          sumber_dana: string
+          synced_at: string | null
+          synced_to_sheet: boolean
+          tahun: number
+          updated_at: string
+        }
+        Insert: {
+          belanja: string
+          bukti_filename?: string | null
+          bukti_mimetype?: string | null
+          bukti_path?: string | null
+          bulan: number
+          created_at?: string
+          id?: string
+          kegiatan: string
+          keterangan?: string | null
+          kode_rup?: string | null
+          nilai_realisasi?: number
+          no_kode_paket?: string | null
+          no_surat_pesanan?: string | null
+          program: string
+          sub_kegiatan: string
+          sumber_dana: string
+          synced_at?: string | null
+          synced_to_sheet?: boolean
+          tahun?: number
+          updated_at?: string
+        }
+        Update: {
+          belanja?: string
+          bukti_filename?: string | null
+          bukti_mimetype?: string | null
+          bukti_path?: string | null
+          bulan?: number
+          created_at?: string
+          id?: string
+          kegiatan?: string
+          keterangan?: string | null
+          kode_rup?: string | null
+          nilai_realisasi?: number
+          no_kode_paket?: string | null
+          no_surat_pesanan?: string | null
+          program?: string
+          sub_kegiatan?: string
+          sumber_dana?: string
+          synced_at?: string | null
+          synced_to_sheet?: boolean
+          tahun?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
