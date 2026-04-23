@@ -12,23 +12,72 @@ import MonthlyDetail from '@/components/dashboard/MonthlyDetail';
 import ReportView from '@/components/dashboard/ReportView';
 import EntryRealisasi from '@/components/dashboard/EntryRealisasi';
 import EvidenceLibrary from '@/components/dashboard/EvidenceLibrary';
+import { supabase } from '@/integrations/supabase/client';
+
+type EntryRow = {
+  program: string; kegiatan: string; sub_kegiatan: string;
+  belanja: string; sumber_dana: string;
+  bulan: number; nilai_realisasi: number;
+};
+
+const norm = (s: string) => (s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+function mergeEntries(base: BudgetRow[], entries: EntryRow[]): BudgetRow[] {
+  if (!entries.length) return base;
+  // Index baris berdasarkan kunci komposit
+  const idx = new Map<string, BudgetRow>();
+  const cloned = base.map(r => {
+    const copy: BudgetRow = { ...r, realisasiBulanan: [...r.realisasiBulanan] };
+    const key = [r.program, r.kegiatan, r.subKegiatan, r.belanja, r.sumberDana].map(norm).join('|');
+    idx.set(key, copy);
+    return copy;
+  });
+  for (const e of entries) {
+    const key = [e.program, e.kegiatan, e.sub_kegiatan, e.belanja, e.sumber_dana].map(norm).join('|');
+    const row = idx.get(key);
+    if (!row) continue;
+    const m = Number(e.bulan) - 1;
+    if (m < 0 || m > 11) continue;
+    const cur = typeof row.realisasiBulanan[m] === 'number' ? (row.realisasiBulanan[m] as number) : 0;
+    row.realisasiBulanan[m] = cur + Number(e.nilai_realisasi || 0);
+  }
+  return cloned;
+}
 
 const Index = () => {
-  const [data, setData] = useState<BudgetRow[]>([]);
+  const [sheetData, setSheetData] = useState<BudgetRow[]>([]);
+  const [entries, setEntries] = useState<EntryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [evidenceReload, setEvidenceReload] = useState(0);
   const [filters, setFilters] = useState<{
     program: string; kegiatan: string; subKegiatan: string; belanja: string; sumberDana: string;
   }>({ program: '', kegiatan: '', subKegiatan: '', belanja: '', sumberDana: '' });
 
-  useEffect(() => {
-    const load = () => {
-      fetchBudgetData().then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
-    };
-    load();
-    const interval = setInterval(load, 5 * 60 * 1000); // auto-refresh setiap 5 menit
-    return () => clearInterval(interval);
+  const loadEntries = useCallback(async () => {
+    const { data: rows } = await supabase
+      .from('realisasi_entries')
+      .select('program,kegiatan,sub_kegiatan,belanja,sumber_dana,bulan,nilai_realisasi');
+    setEntries((rows || []) as EntryRow[]);
   }, []);
+
+  useEffect(() => {
+    const loadSheet = () => {
+      fetchBudgetData().then(d => { setSheetData(d); setLoading(false); }).catch(() => setLoading(false));
+    };
+    loadSheet();
+    loadEntries();
+    const interval = setInterval(() => { loadSheet(); loadEntries(); }, 5 * 60 * 1000);
+
+    // Realtime: dengarkan entry baru -> langsung refresh dashboard
+    const channel = supabase
+      .channel('realisasi-entries-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realisasi_entries' }, () => loadEntries())
+      .subscribe();
+
+    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+  }, [loadEntries]);
+
+  const data = useMemo(() => mergeEntries(sheetData, entries), [sheetData, entries]);
 
   const setFilter = useCallback((key: string, value: string) => {
     setFilters(prev => {
