@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FileDown, RefreshCw, ExternalLink, Search } from 'lucide-react';
+import { FileDown, RefreshCw, ExternalLink, Search, Pencil, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { BULAN, formatRupiah } from '@/lib/spreadsheet';
+import { toast } from 'sonner';
 
 interface EntryRow {
   id: string;
@@ -30,6 +31,16 @@ interface EntryRow {
   created_at: string;
 }
 
+type EditDraft = {
+  bulan: number;
+  tahun: number;
+  nilai_realisasi: number;
+  kode_rup: string;
+  no_kode_paket: string;
+  no_surat_pesanan: string;
+  keterangan: string;
+};
+
 interface Props { reloadKey?: number }
 
 const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
@@ -39,6 +50,9 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
   const [bulan, setBulan] = useState<string>('__all__');
   const [tahun, setTahun] = useState<string>('__all__');
   const [hasBukti, setHasBukti] = useState<string>('__all__');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -80,13 +94,66 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
     return data.publicUrl;
   };
 
+  const startEdit = (r: EntryRow) => {
+    setEditingId(r.id);
+    setDraft({
+      bulan: r.bulan,
+      tahun: r.tahun,
+      nilai_realisasi: Number(r.nilai_realisasi),
+      kode_rup: r.kode_rup ?? '',
+      no_kode_paket: r.no_kode_paket ?? '',
+      no_surat_pesanan: r.no_surat_pesanan ?? '',
+      keterangan: r.keterangan ?? '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setDraft(null);
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!draft) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from('realisasi_entries')
+      .update({
+        bulan: draft.bulan,
+        tahun: draft.tahun,
+        nilai_realisasi: draft.nilai_realisasi,
+        kode_rup: draft.kode_rup || null,
+        no_kode_paket: draft.no_kode_paket || null,
+        no_surat_pesanan: draft.no_surat_pesanan || null,
+        keterangan: draft.keterangan || null,
+        synced_to_sheet: false,
+        synced_at: null,
+      })
+      .eq('id', id);
+    if (error) {
+      toast.error('Gagal menyimpan perubahan: ' + error.message);
+      setSaving(false);
+      return;
+    }
+    // Trigger ulang sync ke spreadsheet (best-effort, jangan blok UI jika gagal)
+    try {
+      await supabase.functions.invoke('sync-to-sheet', { body: { entryId: id } });
+    } catch (e) {
+      console.warn('Sync gagal, entry tetap tersimpan di database', e);
+    }
+    toast.success('Perubahan tersimpan');
+    setSaving(false);
+    setEditingId(null);
+    setDraft(null);
+    load();
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base">Wadah Bukti Realisasi</CardTitle>
-            <p className="text-xs text-muted-foreground">{filtered.length} entry · cari berdasarkan kode RUP, paket, surat, program, dll</p>
+            <p className="text-xs text-muted-foreground">{filtered.length} entry · klik ikon pensil untuk edit · hapus hanya via spreadsheet</p>
           </div>
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`mr-1 h-3 w-3 ${loading ? 'animate-spin' : ''}`} /> Refresh
@@ -141,29 +208,79 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
                 <TableHead className="text-right text-xs">Nilai</TableHead>
                 <TableHead className="text-xs">Bukti</TableHead>
                 <TableHead className="text-xs">Sync</TableHead>
+                <TableHead className="text-xs text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-6">Memuat...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-xs text-muted-foreground py-6">Memuat...</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-6">Belum ada entry</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-xs text-muted-foreground py-6">Belum ada entry</TableCell></TableRow>
               )}
               {filtered.map(r => {
                 const url = buktiUrl(r.bukti_path);
+                const isEditing = editingId === r.id;
                 return (
-                  <TableRow key={r.id} className="text-xs">
+                  <TableRow key={r.id} className="text-xs align-top">
                     <TableCell className="whitespace-nowrap">{new Date(r.created_at).toLocaleDateString('id-ID')}</TableCell>
-                    <TableCell className="whitespace-nowrap">{BULAN[r.bulan - 1]} {r.tahun}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {isEditing && draft ? (
+                        <div className="flex gap-1">
+                          <Select value={String(draft.bulan)} onValueChange={v => setDraft({ ...draft, bulan: Number(v) })}>
+                            <SelectTrigger className="h-7 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {BULAN.map((b, i) => <SelectItem key={i} value={String(i + 1)} className="text-xs">{b}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number"
+                            value={draft.tahun}
+                            onChange={e => setDraft({ ...draft, tahun: Number(e.target.value) })}
+                            className="h-7 w-[70px] text-xs"
+                          />
+                        </div>
+                      ) : (
+                        <>{BULAN[r.bulan - 1]} {r.tahun}</>
+                      )}
+                    </TableCell>
                     <TableCell className="max-w-[220px]">
                       <div className="font-medium truncate" title={r.program}>{r.program}</div>
                       <div className="text-muted-foreground truncate" title={`${r.kegiatan} • ${r.sub_kegiatan}`}>{r.sub_kegiatan}</div>
+                      {isEditing && draft && (
+                        <Input
+                          placeholder="Keterangan"
+                          value={draft.keterangan}
+                          onChange={e => setDraft({ ...draft, keterangan: e.target.value })}
+                          className="h-7 mt-1 text-xs"
+                        />
+                      )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">{r.kode_rup || '-'}</TableCell>
-                    <TableCell className="whitespace-nowrap">{r.no_kode_paket || '-'}</TableCell>
-                    <TableCell className="whitespace-nowrap">{r.no_surat_pesanan || '-'}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap font-medium text-green-600">{formatRupiah(Number(r.nilai_realisasi))}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {isEditing && draft ? (
+                        <Input value={draft.kode_rup} onChange={e => setDraft({ ...draft, kode_rup: e.target.value })} className="h-7 w-[120px] text-xs" />
+                      ) : (r.kode_rup || '-')}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {isEditing && draft ? (
+                        <Input value={draft.no_kode_paket} onChange={e => setDraft({ ...draft, no_kode_paket: e.target.value })} className="h-7 w-[120px] text-xs" />
+                      ) : (r.no_kode_paket || '-')}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {isEditing && draft ? (
+                        <Input value={draft.no_surat_pesanan} onChange={e => setDraft({ ...draft, no_surat_pesanan: e.target.value })} className="h-7 w-[120px] text-xs" />
+                      ) : (r.no_surat_pesanan || '-')}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap font-medium text-green-600">
+                      {isEditing && draft ? (
+                        <Input
+                          type="number"
+                          value={draft.nilai_realisasi}
+                          onChange={e => setDraft({ ...draft, nilai_realisasi: Number(e.target.value) })}
+                          className="h-7 w-[130px] text-xs text-right"
+                        />
+                      ) : formatRupiah(Number(r.nilai_realisasi))}
+                    </TableCell>
                     <TableCell>
                       {url ? (
                         <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
@@ -177,6 +294,22 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
                       {r.synced_to_sheet
                         ? <Badge variant="secondary" className="text-[10px]">Synced</Badge>
                         : <Badge variant="outline" className="text-[10px]">Lokal</Badge>}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {isEditing ? (
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="default" className="h-7 px-2" onClick={() => saveEdit(r.id)} disabled={saving}>
+                            <Save className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={cancelEdit} disabled={saving}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEdit(r)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
