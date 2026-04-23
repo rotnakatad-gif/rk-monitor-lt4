@@ -3,17 +3,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { fetchBudgetData, filterData, getUniqueValues, sumBulanan, type BudgetRow } from '@/lib/spreadsheet';
 import { exportToCSV, downloadTemplate } from '@/lib/export';
-import { Download, FileSpreadsheet, BarChart3, FileText } from 'lucide-react';
+import { Download, FileSpreadsheet, BarChart3, FileText, PlusCircle, FolderOpen } from 'lucide-react';
 import FilterSection from '@/components/dashboard/FilterSection';
 import SummaryCards from '@/components/dashboard/SummaryCards';
 import BudgetCharts from '@/components/dashboard/BudgetCharts';
 import DataTable from '@/components/dashboard/DataTable';
 import MonthlyDetail from '@/components/dashboard/MonthlyDetail';
 import ReportView from '@/components/dashboard/ReportView';
+import EntryRealisasi from '@/components/dashboard/EntryRealisasi';
+import EvidenceLibrary from '@/components/dashboard/EvidenceLibrary';
 
 const Index = () => {
   const [data, setData] = useState<BudgetRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [evidenceReload, setEvidenceReload] = useState(0);
   const [filters, setFilters] = useState<{
     program: string; kegiatan: string; subKegiatan: string; belanja: string; sumberDana: string;
   }>({ program: '', kegiatan: '', subKegiatan: '', belanja: '', sumberDana: '' });
@@ -93,6 +96,12 @@ const Index = () => {
             <TabsTrigger value="data" className="text-xs">
               <BarChart3 className="mr-1 h-3 w-3" /> Data
             </TabsTrigger>
+            <TabsTrigger value="entry" className="text-xs">
+              <PlusCircle className="mr-1 h-3 w-3" /> Entry Realisasi
+            </TabsTrigger>
+            <TabsTrigger value="bukti" className="text-xs">
+              <FolderOpen className="mr-1 h-3 w-3" /> Bukti
+            </TabsTrigger>
             <TabsTrigger value="laporan" className="text-xs">
               <FileText className="mr-1 h-3 w-3" /> Laporan
             </TabsTrigger>
@@ -113,6 +122,14 @@ const Index = () => {
             <BudgetCharts sums={sums} filtered={filtered} />
             <DataTable filtered={filtered} totalAnggaran={totalAnggaran} totalRealisasi={totalRealisasi} penyerapan={penyerapan} />
             <MonthlyDetail sums={sums} />
+          </TabsContent>
+
+          <TabsContent value="entry" className="space-y-4">
+            <EntryRealisasi data={data} onSaved={() => setEvidenceReload(k => k + 1)} />
+          </TabsContent>
+
+          <TabsContent value="bukti" className="space-y-4">
+            <EvidenceLibrary reloadKey={evidenceReload} />
           </TabsContent>
 
           <TabsContent value="laporan" className="space-y-4">
