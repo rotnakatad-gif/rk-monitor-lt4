@@ -80,7 +80,12 @@ const Index = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'realisasi_entries' }, () => loadEntries())
       .subscribe();
 
-    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
   }, [loadEntries]);
 
   const data = useMemo(() => mergeEntries(sheetData, entries), [sheetData, entries]);
