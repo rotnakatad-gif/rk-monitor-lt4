@@ -174,7 +174,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="entry" className="space-y-4">
-            <EntryRealisasi data={data} onSaved={() => setEvidenceReload(k => k + 1)} />
+            <EntryRealisasi data={data} onSaved={() => { setEvidenceReload(k => k + 1); loadEntries(); }} />
           </TabsContent>
 
           <TabsContent value="bukti" className="space-y-4">
