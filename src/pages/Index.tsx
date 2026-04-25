@@ -94,7 +94,7 @@ const Index = () => {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onFocus);
     };
-  }, [loadEntries]);
+  }, [loadEntries, reconcileFromSheet]);
 
   const data = useMemo(() => mergeEntries(sheetData, entries), [sheetData, entries]);
 
