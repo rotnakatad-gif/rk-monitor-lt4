@@ -181,9 +181,7 @@ Deno.serve(async (req) => {
     }
 
     // Baca baris sheet Data (A..H) untuk cari index baris per key
-    const meta = await gw(`${GATEWAY}/spreadsheets/${SOURCE_SHEET_ID}`, {}, lovableKey, sheetsKey);
-    const dataTab = meta?.sheets?.[0]?.properties?.title;
-    if (!dataTab) throw new Error('Source sheet kosong');
+    const dataTab = DATA_TAB;
 
     const head = await gw(
       `${GATEWAY}/spreadsheets/${SOURCE_SHEET_ID}/values/${dataTab}!A2:H`,
