@@ -13,8 +13,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SOURCE_SHEET_ID = '1B2UPHU3uRAa6ixwEjYxNbCiUkBIg_31Dkh6W3g9_Nvc';
-const LOG_SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+const SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+const SOURCE_SHEET_ID = SHEET_ID;
+const LOG_SHEET_ID = SHEET_ID;
+const DATA_TAB = 'Data';
 const LOG_TAB = 'Realisasi_Entries';
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 
