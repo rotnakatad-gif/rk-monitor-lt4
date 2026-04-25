@@ -97,10 +97,8 @@ async function updateSourceSheet(
   lovableKey: string,
   sheetsKey: string,
 ): Promise<{ matched: boolean; sheetTitle?: string; rowNumber?: number; before?: number; after?: number; }> {
-  // 1. Ambil nama sheet pertama dari source
-  const meta = await gw(`${GATEWAY}/spreadsheets/${SOURCE_SHEET_ID}`, {}, lovableKey, sheetsKey);
-  const firstSheet = meta?.sheets?.[0]?.properties?.title;
-  if (!firstSheet) throw new Error('Source spreadsheet has no sheets');
+  // 1. Pakai tab "Data" eksplisit
+  const firstSheet = DATA_TAB;
 
   // 2. Ambil kolom A..H untuk mencari baris yang cocok
   const range = `${firstSheet}!A2:H`;
