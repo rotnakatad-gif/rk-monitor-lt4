@@ -5,11 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Sheet TUJUAN sinkron (dashboard sumber data utama).
-// Ini sheet yang dipakai aplikasi membaca anggaran & realisasi.
-const SOURCE_SHEET_ID = '1B2UPHU3uRAa6ixwEjYxNbCiUkBIg_31Dkh6W3g9_Nvc';
-// Sheet log entry (riwayat semua entry realisasi).
-const LOG_SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+// Satu spreadsheet untuk semuanya:
+//   - tab "Data"               -> sumber anggaran + akumulasi realisasi (kolom U..AF)
+//   - tab "Realisasi_Entries"  -> log semua entry realisasi (riwayat per baris)
+const SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+const SOURCE_SHEET_ID = SHEET_ID;
+const LOG_SHEET_ID = SHEET_ID;
+const DATA_TAB = 'Data';
 const LOG_TAB = 'Realisasi_Entries';
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 
