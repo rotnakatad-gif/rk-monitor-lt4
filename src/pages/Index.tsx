@@ -60,17 +60,25 @@ const Index = () => {
     setEntries((rows || []) as EntryRow[]);
   }, []);
 
+  const reconcileFromSheet = useCallback(async () => {
+    // Rekonsiliasi 2-arah: sheet Realisasi_Entries -> DB -> recompute kolom U..AF di sheet Data
+    try { await supabase.functions.invoke('sync-from-sheet'); } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     const loadSheet = () => {
       fetchBudgetData().then(d => { setSheetData(d); setLoading(false); }).catch(() => setLoading(false));
     };
-    loadSheet();
-    loadEntries();
-    // Polling cepat: spreadsheet sumber dicek setiap 30 detik agar perubahan
-    // (delete/edit) yang dilakukan langsung di Google Sheet langsung terlihat di app.
-    const interval = setInterval(() => { loadSheet(); loadEntries(); }, 30 * 1000);
+    const fullRefresh = async () => {
+      await reconcileFromSheet();   // sinkronisasi dulu
+      loadSheet();                  // lalu baca sheet Data terbaru
+      loadEntries();                // dan entries dari DB
+    };
+    fullRefresh();
+    // Polling 30 detik: rekonsiliasi sheet <-> DB lalu refresh dashboard
+    const interval = setInterval(fullRefresh, 30 * 1000);
     // Refresh otomatis ketika tab dibuka kembali
-    const onFocus = () => { loadSheet(); loadEntries(); };
+    const onFocus = () => { fullRefresh(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onFocus);
 
