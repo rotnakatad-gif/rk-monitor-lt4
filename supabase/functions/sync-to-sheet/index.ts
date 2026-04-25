@@ -220,15 +220,30 @@ Deno.serve(async (req) => {
       lovableKey, sheetsKey,
     );
 
-    // === 2. Update sheet sumber utama (akumulasi nilai realisasi bulan terkait) ===
-    const sourceResult = await updateSourceSheet(row, lovableKey, sheetsKey);
-
-    // === 3. Tandai sudah sync di DB ===
+    // === 2. Tandai sudah sync di DB ===
+    // Kolom U..AF di sheet "Data" akan di-recompute oleh fungsi sync-from-sheet
+    // berdasarkan total entry di DB, supaya tidak terjadi double-count.
     await supabase.from('realisasi_entries')
       .update({ synced_to_sheet: true, synced_at: new Date().toISOString() })
       .eq('id', entry_id);
 
-    return new Response(JSON.stringify({ ok: true, source: sourceResult }), {
+    // === 3. Trigger recompute kolom U..AF langsung (non-blocking di sisi client) ===
+    let recomputeResult: any = null;
+    try {
+      const recRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/sync-from-sheet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: '{}',
+      });
+      recomputeResult = await recRes.json().catch(() => null);
+    } catch (e) {
+      console.warn('Recompute trigger failed:', e instanceof Error ? e.message : e);
+    }
+
+    return new Response(JSON.stringify({ ok: true, recompute: recomputeResult }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
