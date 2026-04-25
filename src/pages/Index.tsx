@@ -24,23 +24,36 @@ const norm = (s: string) => (s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
 
 function mergeEntries(base: BudgetRow[], entries: EntryRow[]): BudgetRow[] {
   if (!entries.length) return base;
-  // Index baris berdasarkan kunci komposit
-  const idx = new Map<string, BudgetRow>();
+
+  // Group DB entries by composite key + month so we can replace (not add to)
+  // the spreadsheet values that were already synced via sync-to-sheet.
+  const entryTotals = new Map<string, Map<number, number>>();
+  for (const e of entries) {
+    const key = [e.program, e.kegiatan, e.sub_kegiatan, e.belanja, e.sumber_dana].map(norm).join('|');
+    const m = Number(e.bulan) - 1;
+    if (m < 0 || m > 11) continue;
+    if (!entryTotals.has(key)) entryTotals.set(key, new Map());
+    const monthMap = entryTotals.get(key)!;
+    monthMap.set(m, (monthMap.get(m) || 0) + Number(e.nilai_realisasi || 0));
+  }
+
+  // Clone base rows and replace realisasi for months that have DB entries
+  const rowIdx = new Map<string, BudgetRow>();
   const cloned = base.map(r => {
     const copy: BudgetRow = { ...r, realisasiBulanan: [...r.realisasiBulanan] };
     const key = [r.program, r.kegiatan, r.subKegiatan, r.belanja, r.sumberDana].map(norm).join('|');
-    idx.set(key, copy);
+    rowIdx.set(key, copy);
     return copy;
   });
-  for (const e of entries) {
-    const key = [e.program, e.kegiatan, e.sub_kegiatan, e.belanja, e.sumber_dana].map(norm).join('|');
-    const row = idx.get(key);
+
+  for (const [key, monthMap] of entryTotals) {
+    const row = rowIdx.get(key);
     if (!row) continue;
-    const m = Number(e.bulan) - 1;
-    if (m < 0 || m > 11) continue;
-    const cur = typeof row.realisasiBulanan[m] === 'number' ? (row.realisasiBulanan[m] as number) : 0;
-    row.realisasiBulanan[m] = cur + Number(e.nilai_realisasi || 0);
+    for (const [m, total] of monthMap) {
+      row.realisasiBulanan[m] = total;
+    }
   }
+
   return cloned;
 }
 
