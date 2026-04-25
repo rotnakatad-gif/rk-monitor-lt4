@@ -5,11 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Sheet TUJUAN sinkron (dashboard sumber data utama).
-// Ini sheet yang dipakai aplikasi membaca anggaran & realisasi.
-const SOURCE_SHEET_ID = '1B2UPHU3uRAa6ixwEjYxNbCiUkBIg_31Dkh6W3g9_Nvc';
-// Sheet log entry (riwayat semua entry realisasi).
-const LOG_SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+// Satu spreadsheet untuk semuanya:
+//   - tab "Data"               -> sumber anggaran + akumulasi realisasi (kolom U..AF)
+//   - tab "Realisasi_Entries"  -> log semua entry realisasi (riwayat per baris)
+const SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+const SOURCE_SHEET_ID = SHEET_ID;
+const LOG_SHEET_ID = SHEET_ID;
+const DATA_TAB = 'Data';
 const LOG_TAB = 'Realisasi_Entries';
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 
@@ -95,10 +97,8 @@ async function updateSourceSheet(
   lovableKey: string,
   sheetsKey: string,
 ): Promise<{ matched: boolean; sheetTitle?: string; rowNumber?: number; before?: number; after?: number; }> {
-  // 1. Ambil nama sheet pertama dari source
-  const meta = await gw(`${GATEWAY}/spreadsheets/${SOURCE_SHEET_ID}`, {}, lovableKey, sheetsKey);
-  const firstSheet = meta?.sheets?.[0]?.properties?.title;
-  if (!firstSheet) throw new Error('Source spreadsheet has no sheets');
+  // 1. Pakai tab "Data" eksplisit
+  const firstSheet = DATA_TAB;
 
   // 2. Ambil kolom A..H untuk mencari baris yang cocok
   const range = `${firstSheet}!A2:H`;

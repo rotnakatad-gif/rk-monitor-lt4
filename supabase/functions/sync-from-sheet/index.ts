@@ -13,8 +13,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SOURCE_SHEET_ID = '1B2UPHU3uRAa6ixwEjYxNbCiUkBIg_31Dkh6W3g9_Nvc';
-const LOG_SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+const SHEET_ID = '1tLWXV07F2aTZWy9iTbxOoSpvKfJrfYzVcAG36AjnMmI';
+const SOURCE_SHEET_ID = SHEET_ID;
+const LOG_SHEET_ID = SHEET_ID;
+const DATA_TAB = 'Data';
 const LOG_TAB = 'Realisasi_Entries';
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 
@@ -179,9 +181,7 @@ Deno.serve(async (req) => {
     }
 
     // Baca baris sheet Data (A..H) untuk cari index baris per key
-    const meta = await gw(`${GATEWAY}/spreadsheets/${SOURCE_SHEET_ID}`, {}, lovableKey, sheetsKey);
-    const dataTab = meta?.sheets?.[0]?.properties?.title;
-    if (!dataTab) throw new Error('Source sheet kosong');
+    const dataTab = DATA_TAB;
 
     const head = await gw(
       `${GATEWAY}/spreadsheets/${SOURCE_SHEET_ID}/values/${dataTab}!A2:H`,
