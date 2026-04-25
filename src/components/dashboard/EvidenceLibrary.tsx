@@ -5,10 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FileDown, RefreshCw, ExternalLink, Search, Pencil, Save, X } from 'lucide-react';
+import { FileDown, RefreshCw, ExternalLink, Search, Pencil, Save, X, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { BULAN, formatRupiah } from '@/lib/spreadsheet';
 import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface EntryRow {
   id: string;
@@ -53,6 +58,22 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteEntry = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-entry', { body: { entry_id: id } });
+      if (error) throw error;
+      if (data && (data as any).ok === false) throw new Error((data as any).error || 'Gagal menghapus');
+      toast.success('Entry dihapus');
+      load();
+    } catch (e: any) {
+      toast.error('Gagal menghapus: ' + (e?.message || String(e)));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -153,7 +174,7 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <CardTitle className="text-base">Wadah Bukti Realisasi</CardTitle>
-            <p className="text-xs text-muted-foreground">{filtered.length} entry · klik ikon pensil untuk edit · hapus hanya via spreadsheet</p>
+            <p className="text-xs text-muted-foreground">{filtered.length} entry · klik pensil untuk edit · klik ikon sampah untuk hapus</p>
           </div>
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`mr-1 h-3 w-3 ${loading ? 'animate-spin' : ''}`} /> Refresh
@@ -306,9 +327,42 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
                           </Button>
                         </div>
                       ) : (
-                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEdit(r)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEdit(r)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-destructive hover:text-destructive"
+                                disabled={deletingId === r.id}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus entry ini?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Entry akan dihapus dari database, file bukti, dan baris di spreadsheet
+                                  Realisasi_Entries. Kolom realisasi di sheet Data akan otomatis dihitung ulang.
+                                  Tindakan ini tidak bisa dibatalkan.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteEntry(r.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Hapus
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
