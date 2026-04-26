@@ -87,6 +87,17 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
 
   useEffect(() => { load(); }, [reloadKey]);
 
+  // Realtime: dengarkan perubahan tabel realisasi_entries (insert/update/delete)
+  // sehingga edit/hapus dari spreadsheet (yang di-sync ke DB oleh sync-from-sheet)
+  // langsung muncul di panel Bukti tanpa perlu refresh manual.
+  useEffect(() => {
+    const channel = supabase
+      .channel('evidence-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realisasi_entries' }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   const tahunOptions = useMemo(() => {
     const set = new Set<number>();
     rows.forEach(r => set.add(r.tahun));
