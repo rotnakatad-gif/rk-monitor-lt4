@@ -87,6 +87,17 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
 
   useEffect(() => { load(); }, [reloadKey]);
 
+  // Realtime: dengarkan perubahan tabel realisasi_entries (insert/update/delete)
+  // sehingga edit/hapus dari spreadsheet (yang di-sync ke DB oleh sync-from-sheet)
+  // langsung muncul di panel Bukti tanpa perlu refresh manual.
+  useEffect(() => {
+    const channel = supabase
+      .channel('evidence-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realisasi_entries' }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   const tahunOptions = useMemo(() => {
     const set = new Set<number>();
     rows.forEach(r => set.add(r.tahun));
@@ -155,11 +166,12 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
       setSaving(false);
       return;
     }
-    // Trigger ulang sync ke spreadsheet (best-effort, jangan blok UI jika gagal)
+    // Recompute kolom U..AF di spreadsheet langsung berdasarkan DB (sumber kebenaran).
+    // Jangan pakai sync-to-sheet karena akan membuat baris log duplikat.
     try {
-      await supabase.functions.invoke('sync-to-sheet', { body: { entryId: id } });
+      await supabase.functions.invoke('sync-from-sheet');
     } catch (e) {
-      console.warn('Sync gagal, entry tetap tersimpan di database', e);
+      console.warn('Recompute gagal, perubahan tetap tersimpan di database', e);
     }
     toast.success('Perubahan tersimpan');
     setSaving(false);

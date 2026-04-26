@@ -96,7 +96,10 @@ const Index = () => {
     };
   }, [loadEntries, reconcileFromSheet]);
 
-  const data = useMemo(() => mergeEntries(sheetData, entries), [sheetData, entries]);
+  // Sheet "Data" sudah berisi total realisasi (U..AF) yang di-recompute oleh
+  // sync-from-sheet dari DB. Jadi gunakan langsung sheetData TANPA mergeEntries
+  // untuk menghindari double-count.
+  const data = sheetData;
 
   const setFilter = useCallback((key: string, value: string) => {
     setFilters(prev => {
