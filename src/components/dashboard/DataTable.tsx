@@ -52,7 +52,7 @@ const DataTable = memo(({ filtered, totalAnggaran, totalRealisasi, penyerapan }:
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.slice(0, 100).map((row, i) => {
+              {filtered.map((row, i) => {
                 const totalAng = row.anggaranBulanan.reduce((a, b) => a + b, 0);
                 const totalReal = row.realisasiBulanan.reduce<number>((a, b) => a + (typeof b === 'number' ? b : 0), 0);
                 const sisa = totalAng - totalReal;
