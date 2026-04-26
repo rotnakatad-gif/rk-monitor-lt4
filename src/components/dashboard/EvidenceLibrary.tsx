@@ -155,11 +155,12 @@ const EvidenceLibrary = memo(({ reloadKey = 0 }: Props) => {
       setSaving(false);
       return;
     }
-    // Trigger ulang sync ke spreadsheet (best-effort, jangan blok UI jika gagal)
+    // Recompute kolom U..AF di spreadsheet langsung berdasarkan DB (sumber kebenaran).
+    // Jangan pakai sync-to-sheet karena akan membuat baris log duplikat.
     try {
-      await supabase.functions.invoke('sync-to-sheet', { body: { entryId: id } });
+      await supabase.functions.invoke('sync-from-sheet');
     } catch (e) {
-      console.warn('Sync gagal, entry tetap tersimpan di database', e);
+      console.warn('Recompute gagal, perubahan tetap tersimpan di database', e);
     }
     toast.success('Perubahan tersimpan');
     setSaving(false);
