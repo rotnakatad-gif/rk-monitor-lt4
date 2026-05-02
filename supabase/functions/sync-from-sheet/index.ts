@@ -264,8 +264,18 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Tulis batch ke U2:AF<lastRow>
-    if (rows.length) {
+    // Skip write jika tidak ada perubahan vs existing (hemat kuota & latensi)
+    let changed = false;
+    for (let i = 0; i < newValues.length; i++) {
+      const cur = existRows[i] || [];
+      for (let m = 0; m < 12; m++) {
+        if (parseNum(cur[m] ?? '') !== Number(newValues[i][m])) { changed = true; break; }
+      }
+      if (changed) break;
+    }
+
+    // Tulis batch ke U2:AF<lastRow> hanya jika ada perubahan
+    if (rows.length && changed) {
       await gw(
         `${GATEWAY}/spreadsheets/${SOURCE_SHEET_ID}/values/${dataTab}!U2:AF${lastRow}?valueInputOption=USER_ENTERED`,
         { method: 'PUT', body: JSON.stringify({ values: newValues.map(row => row.map(v => String(v))) }) },
