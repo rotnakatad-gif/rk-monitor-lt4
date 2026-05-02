@@ -107,7 +107,7 @@ const BudgetCharts = memo(({ sums, filtered }: BudgetChartsProps) => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 30%, 90%)" />
                     <XAxis dataKey="bulan" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
-                    <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                    <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
                     <Bar dataKey="Penyerapan" fill="hsl(210, 80%, 55%)" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

@@ -67,7 +67,7 @@ const DataTable = memo(({ filtered, totalAnggaran, totalRealisasi, penyerapan }:
                     <TableCell className="text-right font-medium whitespace-nowrap">{formatRupiah(totalAng)}</TableCell>
                     <TableCell className={`text-right font-medium whitespace-nowrap ${totalReal < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(totalReal)}</TableCell>
                     <TableCell className={`text-right whitespace-nowrap ${sisa < 0 ? 'text-red-600' : ''}`}>{formatRupiah(sisa)}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">{pct.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{pct.toFixed(2)}%</TableCell>
                   </TableRow>
                 );
               })}
@@ -76,7 +76,7 @@ const DataTable = memo(({ filtered, totalAnggaran, totalRealisasi, penyerapan }:
                 <TableCell className="text-right text-primary whitespace-nowrap">{formatRupiah(totalAnggaran)}</TableCell>
                 <TableCell className={`text-right whitespace-nowrap ${totalRealisasi < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(totalRealisasi)}</TableCell>
                 <TableCell className={`text-right whitespace-nowrap ${totalSisa < 0 ? 'text-red-600' : ''}`}>{formatRupiah(totalSisa)}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">{penyerapan.toFixed(1)}%</TableCell>
+                <TableCell className="text-right whitespace-nowrap">{penyerapan.toFixed(2)}%</TableCell>
               </TableRow>
             </TableBody>
           </Table>

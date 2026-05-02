@@ -36,7 +36,7 @@ const MonthlyDetail = memo(({ sums }: MonthlyDetailProps) => (
                   <TableCell className="text-right">{formatRupiah(ang)}</TableCell>
                   <TableCell className={`text-right font-medium ${real < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(real)}</TableCell>
                   <TableCell className={`text-right ${selisih < 0 ? 'text-red-600' : ''}`}>{formatRupiah(selisih)}</TableCell>
-                  <TableCell className="text-right">{pct.toFixed(1)}%</TableCell>
+                  <TableCell className="text-right">{pct.toFixed(2)}%</TableCell>
                 </TableRow>
               );
             })}
