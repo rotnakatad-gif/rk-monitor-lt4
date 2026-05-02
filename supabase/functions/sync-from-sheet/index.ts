@@ -30,6 +30,26 @@ const COL = {
   no_sp: 11, keterangan: 12, bukti_url: 13, bukti_filename: 14, entry_id: 15,
 };
 
+function parseTanggal(s: any): string | null {
+  if (!s) return null;
+  const t = String(s).trim();
+  if (!t) return null;
+  // Coba ISO YYYY-MM-DD atau ISO datetime
+  const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  // DD/MM/YYYY atau D/M/YYYY
+  const dmy = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (dmy) {
+    const d = dmy[1].padStart(2, '0');
+    const m = dmy[2].padStart(2, '0');
+    return `${dmy[3]}-${m}-${d}`;
+  }
+  // Fallback: coba Date.parse
+  const d = new Date(t);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return null;
+}
+
 const BULAN = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
 const REALISASI_COL_LETTERS = ['U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AF'];
 
