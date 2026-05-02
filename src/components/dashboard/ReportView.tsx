@@ -62,7 +62,7 @@ const ReportView = memo(({ filtered, sums }: ReportViewProps) => {
                 </TableRow>
                 <TableRow className="text-xs border-t-2 font-bold">
                   <TableCell>Penyerapan</TableCell>
-                  <TableCell className="text-right">{penyerapan.toFixed(1)}%</TableCell>
+                  <TableCell className="text-right">{penyerapan.toFixed(2)}%</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -87,7 +87,7 @@ const ReportView = memo(({ filtered, sums }: ReportViewProps) => {
                     <TableCell className="text-right">{formatRupiah(tw.anggaran)}</TableCell>
                     <TableCell className={`text-right font-medium ${tw.realisasi < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(tw.realisasi)}</TableCell>
                     <TableCell className="text-right">{formatRupiah(tw.anggaran - tw.realisasi)}</TableCell>
-                    <TableCell className="text-right">{tw.pct.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">{tw.pct.toFixed(2)}%</TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="text-xs border-t-2 font-bold">
@@ -95,7 +95,7 @@ const ReportView = memo(({ filtered, sums }: ReportViewProps) => {
                   <TableCell className="text-right text-primary">{formatRupiah(totalAnggaran)}</TableCell>
                   <TableCell className={`text-right ${totalRealisasi < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(totalRealisasi)}</TableCell>
                   <TableCell className="text-right">{formatRupiah(totalAnggaran - totalRealisasi)}</TableCell>
-                  <TableCell className="text-right">{penyerapan.toFixed(1)}%</TableCell>
+                  <TableCell className="text-right">{penyerapan.toFixed(2)}%</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -124,7 +124,7 @@ const ReportView = memo(({ filtered, sums }: ReportViewProps) => {
                       <TableCell className="text-right">{formatRupiah(ang)}</TableCell>
                       <TableCell className={`text-right font-medium ${real < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(real)}</TableCell>
                       <TableCell className="text-right">{formatRupiah(ang - real)}</TableCell>
-                      <TableCell className="text-right">{pct.toFixed(1)}%</TableCell>
+                      <TableCell className="text-right">{pct.toFixed(2)}%</TableCell>
                     </TableRow>
                   );
                 })}
@@ -133,7 +133,7 @@ const ReportView = memo(({ filtered, sums }: ReportViewProps) => {
                   <TableCell className="text-right text-primary">{formatRupiah(totalAnggaran)}</TableCell>
                   <TableCell className={`text-right ${totalRealisasi < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatRupiah(totalRealisasi)}</TableCell>
                   <TableCell className="text-right">{formatRupiah(totalAnggaran - totalRealisasi)}</TableCell>
-                  <TableCell className="text-right">{penyerapan.toFixed(1)}%</TableCell>
+                  <TableCell className="text-right">{penyerapan.toFixed(2)}%</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

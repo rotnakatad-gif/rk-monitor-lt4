@@ -8,7 +8,7 @@ export function exportToCSV(data: BudgetRow[], filename: string = 'data_anggaran
   const rows = data.map(r => {
     const totalAng = r.anggaranBulanan.reduce((a, b) => a + b, 0);
     const totalReal = r.realisasiBulanan.reduce<number>((a, b) => a + (typeof b === 'number' ? b : 0), 0);
-    const pct = totalAng > 0 ? ((totalReal / totalAng) * 100).toFixed(1) : '0';
+    const pct = totalAng > 0 ? ((totalReal / totalAng) * 100).toFixed(2) : '0';
     return [r.program, r.kegiatan, r.subKegiatan, r.belanja, r.sumberDana,
       ...r.anggaranBulanan, ...r.realisasiBulanan.map(v => typeof v === 'number' ? v : 0),
       totalAng, totalReal, pct];
