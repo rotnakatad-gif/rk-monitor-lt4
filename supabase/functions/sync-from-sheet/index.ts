@@ -110,16 +110,31 @@ Deno.serve(async (req) => {
     type SheetEntry = {
       entry_id: string; program: string; kegiatan: string; sub_kegiatan: string;
       belanja: string; sumber_dana: string; bulan: number; tahun: number;
+      tanggal_realisasi: string | null;
       nilai_realisasi: number; kode_rup: string; no_kode_paket: string;
       no_surat_pesanan: string; keterangan: string;
     };
     const sheetEntries: SheetEntry[] = [];
     const sheetIds = new Set<string>();
+    const seenIds = new Set<string>(); // dedup per-id (kolom A1 ON CONFLICT crash kalau dobel)
     for (const r of logRows) {
       const id = (r[COL.entry_id] || '').trim();
-      if (!id || !isUuid(id)) continue; // skip baris tanpa Entry ID valid
-      const bulan = bulanToInt(r[COL.bulan]);
+      if (!id || !isUuid(id)) continue;
+      if (seenIds.has(id)) continue; // skip baris duplikat dengan id sama
+      seenIds.add(id);
+
+      const tanggal = parseTanggal(r[COL.tanggal]);
+      let bulan = bulanToInt(r[COL.bulan]);
+      let tahun = Number(r[COL.tahun]);
+      // fallback: derive bulan/tahun dari tanggal_realisasi
+      if ((!bulan || !tahun) && tanggal) {
+        const [y, m] = tanggal.split('-');
+        if (!bulan) bulan = Number(m);
+        if (!tahun) tahun = Number(y);
+      }
       if (!bulan) continue;
+      if (!tahun) tahun = new Date().getFullYear();
+
       sheetIds.add(id);
       sheetEntries.push({
         entry_id: id,
@@ -128,8 +143,8 @@ Deno.serve(async (req) => {
         sub_kegiatan: r[COL.sub] || '',
         belanja: r[COL.belanja] || '',
         sumber_dana: r[COL.sumber] || '',
-        bulan,
-        tahun: Number(r[COL.tahun]) || new Date().getFullYear(),
+        bulan, tahun,
+        tanggal_realisasi: tanggal,
         nilai_realisasi: parseNum(r[COL.nilai]),
         kode_rup: r[COL.kode_rup] || '',
         no_kode_paket: r[COL.no_paket] || '',
@@ -147,15 +162,12 @@ Deno.serve(async (req) => {
     const dbMap = new Map<string, any>();
     for (const e of (dbEntries || [])) dbMap.set(e.id as string, e);
 
-    // === 3. Hapus DB yang tidak ada di sheet (HANYA yang sudah pernah disync & tidak punya bukti) ===
-    // Aman: kita hanya hapus entry yang sudah `synced_to_sheet=true` (artinya pernah ada di sheet).
-    // Yang baru dibuat dari app tapi belum sync tidak akan terhapus.
+    // === 3. Hapus DB yang tidak ada di sheet (HANYA yang sudah pernah disync) ===
     const toDelete: string[] = [];
     for (const [id, row] of dbMap.entries()) {
       if (!sheetIds.has(id) && row.synced_to_sheet) toDelete.push(id);
     }
     if (toDelete.length) {
-      // Hapus file bukti dulu
       const paths = (dbEntries || [])
         .filter((e: any) => toDelete.includes(e.id) && e.bukti_path)
         .map((e: any) => e.bukti_path);
@@ -166,12 +178,12 @@ Deno.serve(async (req) => {
     }
 
     // === 4. Upsert semua entry dari sheet ke DB ===
-    // (insert baru kalau belum ada, update kalau nilai berubah)
     const toUpsert = sheetEntries.map(e => ({
       id: e.entry_id,
       program: e.program, kegiatan: e.kegiatan, sub_kegiatan: e.sub_kegiatan,
       belanja: e.belanja, sumber_dana: e.sumber_dana,
       bulan: e.bulan, tahun: e.tahun,
+      tanggal_realisasi: e.tanggal_realisasi,
       nilai_realisasi: e.nilai_realisasi,
       kode_rup: e.kode_rup || null,
       no_kode_paket: e.no_kode_paket || null,
