@@ -5,15 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { id as localeID } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { BULAN, getUniqueValues, type BudgetRow } from '@/lib/spreadsheet';
+import { getUniqueValues, type BudgetRow } from '@/lib/spreadsheet';
 
 interface Props {
   data: BudgetRow[];
   onSaved?: () => void;
 }
+
+const today = new Date();
 
 const initialForm = {
   program: '',
@@ -21,8 +28,7 @@ const initialForm = {
   subKegiatan: '',
   belanja: '',
   sumberDana: '',
-  bulan: String(new Date().getMonth() + 1),
-  tahun: String(new Date().getFullYear()),
+  tanggal: today,
   nilai: '',
   kodeRup: '',
   noKodePaket: '',
@@ -35,13 +41,12 @@ const EntryRealisasi = memo(({ data, onSaved }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const set = (k: keyof typeof form, v: string) => {
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
     setForm(prev => {
-      const next = { ...prev, [k]: v };
-      // cascade reset
+      const next = { ...prev, [k]: v } as typeof form;
       const order: (keyof typeof form)[] = ['program', 'kegiatan', 'subKegiatan', 'belanja', 'sumberDana'];
       const idx = order.indexOf(k);
-      if (idx !== -1) for (let i = idx + 1; i < order.length; i++) next[order[i]] = '';
+      if (idx !== -1) for (let i = idx + 1; i < order.length; i++) (next as any)[order[i]] = '';
       return next;
     });
   };
@@ -63,6 +68,10 @@ const EntryRealisasi = memo(({ data, onSaved }: Props) => {
       toast.error('Lengkapi semua dropdown (program s/d sumber dana)');
       return;
     }
+    if (!form.tanggal) {
+      toast.error('Pilih tanggal realisasi');
+      return;
+    }
     const nilai = Number(form.nilai.replace(/\./g, '').replace(/,/g, '.'));
     if (!nilai || nilai <= 0) {
       toast.error('Nilai realisasi harus lebih dari 0');
@@ -70,6 +79,11 @@ const EntryRealisasi = memo(({ data, onSaved }: Props) => {
     }
     setSaving(true);
     try {
+      const tgl = form.tanggal;
+      const bulan = tgl.getMonth() + 1;
+      const tahun = tgl.getFullYear();
+      const tanggalISO = format(tgl, 'yyyy-MM-dd');
+
       let bukti_path: string | null = null;
       let bukti_filename: string | null = null;
       let bukti_mimetype: string | null = null;
@@ -81,7 +95,7 @@ const EntryRealisasi = memo(({ data, onSaved }: Props) => {
           return;
         }
         const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-        const path = `${form.tahun}/${form.bulan.padStart(2, '0')}/${Date.now()}_${safeName}`;
+        const path = `${tahun}/${String(bulan).padStart(2, '0')}/${Date.now()}_${safeName}`;
         const { error: upErr } = await supabase.storage
           .from('bukti-realisasi')
           .upload(path, file, { contentType: file.type, upsert: false });
@@ -97,8 +111,9 @@ const EntryRealisasi = memo(({ data, onSaved }: Props) => {
         sub_kegiatan: form.subKegiatan,
         belanja: form.belanja,
         sumber_dana: form.sumberDana,
-        bulan: Number(form.bulan),
-        tahun: Number(form.tahun),
+        bulan,
+        tahun,
+        tanggal_realisasi: tanggalISO,
         nilai_realisasi: nilai,
         kode_rup: form.kodeRup || null,
         no_kode_paket: form.noKodePaket || null,
@@ -111,7 +126,6 @@ const EntryRealisasi = memo(({ data, onSaved }: Props) => {
 
       if (error) throw error;
 
-      // Try sync to spreadsheet (non-blocking)
       supabase.functions.invoke('sync-to-sheet', { body: { entry_id: inserted.id } })
         .then(({ error: e }) => {
           if (e) console.warn('Sync sheet gagal (entry tetap tersimpan di database):', e.message);
@@ -153,16 +167,30 @@ const EntryRealisasi = memo(({ data, onSaved }: Props) => {
           <Field label="Sumber Dana *">
             <SelectField value={form.sumberDana} options={sumberOptions} placeholder="Pilih sumber dana" onChange={v => set('sumberDana', v)} disabled={!form.belanja} />
           </Field>
-          <Field label="Bulan *">
-            <Select value={form.bulan} onValueChange={v => set('bulan', v)}>
-              <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {BULAN.map((b, i) => <SelectItem key={i} value={String(i + 1)} className="text-xs">{b}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Tahun *">
-            <Input className="h-9 text-xs" type="number" value={form.tahun} onChange={e => set('tahun', e.target.value)} />
+          <Field label="Tanggal Realisasi *">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'h-9 w-full justify-start text-left font-normal text-xs',
+                    !form.tanggal && 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                  {form.tanggal ? format(form.tanggal, 'dd MMMM yyyy', { locale: localeID }) : 'Pilih tanggal'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.tanggal}
+                  onSelect={(d) => d && set('tanggal', d)}
+                  initialFocus
+                  className={cn('p-3 pointer-events-auto')}
+                />
+              </PopoverContent>
+            </Popover>
           </Field>
           <Field label="Nilai Realisasi (Rp) *">
             <Input className="h-9 text-xs" inputMode="numeric" placeholder="contoh: 1500000"

@@ -16,7 +16,7 @@ const LOG_TAB = 'Realisasi_Entries';
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 
 const LOG_HEADERS = [
-  'Tanggal Entry', 'Tahun', 'Bulan', 'Program', 'Kegiatan', 'Sub Kegiatan',
+  'Tanggal Realisasi', 'Tahun', 'Bulan', 'Program', 'Kegiatan', 'Sub Kegiatan',
   'Belanja', 'Sumber Dana', 'Nilai Realisasi', 'Kode RUP', 'No Kode Paket',
   'No Surat Pesanan', 'Keterangan', 'Bukti URL', 'Bukti Filename', 'Entry ID'
 ];
@@ -70,15 +70,16 @@ function formatID(n: number): string {
 async function ensureLogTab(lovableKey: string, sheetsKey: string) {
   const meta = await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}`, {}, lovableKey, sheetsKey);
   const exists = (meta?.sheets || []).some((s: any) => s?.properties?.title === LOG_TAB);
-  if (exists) return;
+  if (!exists) {
+    await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}:batchUpdate`, {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [{ addSheet: { properties: { title: LOG_TAB } } }],
+      }),
+    }, lovableKey, sheetsKey);
+  }
 
-  await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}:batchUpdate`, {
-    method: 'POST',
-    body: JSON.stringify({
-      requests: [{ addSheet: { properties: { title: LOG_TAB } } }],
-    }),
-  }, lovableKey, sheetsKey);
-
+  // Selalu pastikan header A1:P1 sesuai (auto-rename "Tanggal Entry" -> "Tanggal Realisasi")
   await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}/values/${LOG_TAB}!A1:P1?valueInputOption=USER_ENTERED`, {
     method: 'PUT',
     body: JSON.stringify({ values: [LOG_HEADERS] }),
@@ -197,7 +198,7 @@ Deno.serve(async (req) => {
     // === 1. Append ke log sheet (riwayat) ===
     await ensureLogTab(lovableKey, sheetsKey);
     const values = [[
-      new Date(row.created_at).toISOString(),
+      row.tanggal_realisasi || '',
       row.tahun,
       BULAN[row.bulan - 1] || row.bulan,
       row.program,

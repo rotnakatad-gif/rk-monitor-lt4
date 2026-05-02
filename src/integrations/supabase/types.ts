@@ -35,6 +35,7 @@ export type Database = {
           synced_at: string | null
           synced_to_sheet: boolean
           tahun: number
+          tanggal_realisasi: string | null
           updated_at: string
         }
         Insert: {
@@ -57,6 +58,7 @@ export type Database = {
           synced_at?: string | null
           synced_to_sheet?: boolean
           tahun?: number
+          tanggal_realisasi?: string | null
           updated_at?: string
         }
         Update: {
@@ -79,6 +81,7 @@ export type Database = {
           synced_at?: string | null
           synced_to_sheet?: boolean
           tahun?: number
+          tanggal_realisasi?: string | null
           updated_at?: string
         }
         Relationships: []
