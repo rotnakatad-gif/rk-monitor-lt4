@@ -16,7 +16,7 @@ const LOG_TAB = 'Realisasi_Entries';
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 
 const LOG_HEADERS = [
-  'Tanggal Entry', 'Tahun', 'Bulan', 'Program', 'Kegiatan', 'Sub Kegiatan',
+  'Tanggal Realisasi', 'Tahun', 'Bulan', 'Program', 'Kegiatan', 'Sub Kegiatan',
   'Belanja', 'Sumber Dana', 'Nilai Realisasi', 'Kode RUP', 'No Kode Paket',
   'No Surat Pesanan', 'Keterangan', 'Bukti URL', 'Bukti Filename', 'Entry ID'
 ];
