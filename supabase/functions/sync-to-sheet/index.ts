@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     // === 1. Append ke log sheet (riwayat) ===
     await ensureLogTab(lovableKey, sheetsKey);
     const values = [[
-      new Date(row.created_at).toISOString(),
+      row.tanggal_realisasi || '',
       row.tahun,
       BULAN[row.bulan - 1] || row.bulan,
       row.program,
