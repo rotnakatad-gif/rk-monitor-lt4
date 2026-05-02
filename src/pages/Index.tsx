@@ -69,30 +69,40 @@ const Index = () => {
     const loadSheet = () => {
       fetchBudgetData().then(d => { setSheetData(d); setLoading(false); }).catch(() => setLoading(false));
     };
-    const fullRefresh = async () => {
-      await reconcileFromSheet();   // sinkronisasi dulu
-      loadSheet();                  // lalu baca sheet Data terbaru
-      loadEntries();                // dan entries dari DB
+    const lightRefresh = () => {
+      // Hanya baca ulang sheet Data + entries DB (cepat, tanpa panggil edge function)
+      loadSheet();
+      loadEntries();
     };
-    fullRefresh();
-    // Polling 30 detik: rekonsiliasi sheet <-> DB lalu refresh dashboard
-    const interval = setInterval(fullRefresh, 30 * 1000);
-    // Refresh otomatis ketika tab dibuka kembali
-    const onFocus = () => { fullRefresh(); };
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onFocus);
+    const heavyRefresh = async () => {
+      // Rekonsiliasi penuh sheet <-> DB (hanya saat awal & polling jarang)
+      try { await reconcileFromSheet(); } catch { /* ignore */ }
+      lightRefresh();
+    };
+    heavyRefresh();
 
-    // Realtime: dengarkan entry baru -> langsung refresh dashboard
+    // Polling jarang (3 menit) untuk rekonsiliasi penuh
+    const heavyInterval = setInterval(heavyRefresh, 3 * 60 * 1000);
+
+    // Realtime dari DB sudah cukup untuk perubahan dari app sendiri.
+    // Tab kembali fokus -> cukup light refresh (tidak panggil edge function setiap kali).
+    let focusTimer: number | null = null;
+    const onFocus = () => {
+      if (focusTimer) return;
+      focusTimer = window.setTimeout(() => { focusTimer = null; lightRefresh(); }, 500);
+    };
+    window.addEventListener('focus', onFocus);
+
+    // Realtime: dengarkan perubahan -> reload entries + sheet
     const channel = supabase
       .channel('realisasi-entries-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'realisasi_entries' }, () => loadEntries())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realisasi_entries' }, () => lightRefresh())
       .subscribe();
 
     return () => {
-      clearInterval(interval);
+      clearInterval(heavyInterval);
       supabase.removeChannel(channel);
       window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onFocus);
     };
   }, [loadEntries, reconcileFromSheet]);
 
