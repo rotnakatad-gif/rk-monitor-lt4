@@ -70,15 +70,16 @@ function formatID(n: number): string {
 async function ensureLogTab(lovableKey: string, sheetsKey: string) {
   const meta = await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}`, {}, lovableKey, sheetsKey);
   const exists = (meta?.sheets || []).some((s: any) => s?.properties?.title === LOG_TAB);
-  if (exists) return;
+  if (!exists) {
+    await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}:batchUpdate`, {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [{ addSheet: { properties: { title: LOG_TAB } } }],
+      }),
+    }, lovableKey, sheetsKey);
+  }
 
-  await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}:batchUpdate`, {
-    method: 'POST',
-    body: JSON.stringify({
-      requests: [{ addSheet: { properties: { title: LOG_TAB } } }],
-    }),
-  }, lovableKey, sheetsKey);
-
+  // Selalu pastikan header A1:P1 sesuai (auto-rename "Tanggal Entry" -> "Tanggal Realisasi")
   await gw(`${GATEWAY}/spreadsheets/${LOG_SHEET_ID}/values/${LOG_TAB}!A1:P1?valueInputOption=USER_ENTERED`, {
     method: 'PUT',
     body: JSON.stringify({ values: [LOG_HEADERS] }),
